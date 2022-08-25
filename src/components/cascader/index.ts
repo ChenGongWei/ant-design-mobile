@@ -2,8 +2,9 @@ import { Cascader } from './cascader'
 import { prompt } from './prompt'
 import { attachPropertiesToComponent } from '../../utils/attach-properties-to-component'
 import './cascader.less'
+import { optionSkeleton } from '../cascader-view/option-skeleton'
 
-export type { CascaderProps } from './cascader'
+export type { CascaderProps, CascaderRef, CascaderActions } from './cascader'
 
 export type {
   CascaderValue,
@@ -13,4 +14,5 @@ export type {
 
 export default attachPropertiesToComponent(Cascader, {
   prompt,
+  optionSkeleton,
 })

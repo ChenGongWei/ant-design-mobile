@@ -26,12 +26,20 @@ export type NoticeBarProps = {
   extra?: React.ReactNode
   /** 左侧广播图标 */
   icon?: React.ReactNode
-} & NativeProps<'--background-color' | '--border-color' | '--text-color'>
+} & NativeProps<
+  | '--background-color'
+  | '--border-color'
+  | '--text-color'
+  | '--font-size'
+  | '--icon-font-size'
+  | '--height'
+>
 
 const defaultProps = {
   color: 'default',
   delay: 2000,
   speed: 50,
+  icon: <SoundOutline />,
 }
 
 export const NoticeBar = memo<NoticeBarProps>(p => {
@@ -83,7 +91,7 @@ export const NoticeBar = memo<NoticeBarProps>(p => {
     start()
   }, props.delay)
 
-  useResizeEffect(text => {
+  useResizeEffect(() => {
     start()
   }, containerRef)
 
@@ -104,9 +112,9 @@ export const NoticeBar = memo<NoticeBarProps>(p => {
   return withNativeProps(
     props,
     <div className={classNames(classPrefix, `${classPrefix}-${props.color}`)}>
-      <span className={`${classPrefix}-left`}>
-        {'icon' in props ? props.icon : <SoundOutline />}
-      </span>
+      {props.icon && (
+        <span className={`${classPrefix}-left`}>{props.icon}</span>
+      )}
       <span ref={containerRef} className={`${classPrefix}-content`}>
         <span
           onTransitionEnd={() => {
@@ -123,12 +131,15 @@ export const NoticeBar = memo<NoticeBarProps>(p => {
         <span className={`${classPrefix}-right`}>
           {props.extra}
           {props.closeable && (
-            <CloseOutline
+            <div
+              className={`${classPrefix}-close`}
               onClick={() => {
                 setVisible(false)
                 props.onClose?.()
               }}
-            />
+            >
+              <CloseOutline className={`${classPrefix}-close-icon`} />
+            </div>
           )}
         </span>
       )}

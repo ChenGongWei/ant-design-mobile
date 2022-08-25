@@ -12,6 +12,12 @@ import { useDrag } from '@use-gesture/react'
 import Button from '../button'
 import { nearest } from '../../utils/nearest'
 import { NativeProps, withNativeProps } from '../../utils/native-props'
+import {
+  PropagationEvent,
+  withStopPropagation,
+} from '../../utils/with-stop-propagation'
+
+const classPrefix = `adm-swipe-action`
 
 export type SwipeActionRef = {
   close: () => void
@@ -36,10 +42,12 @@ export type Action = {
 export type SwipeActionProps = {
   rightActions?: Action[]
   leftActions?: Action[]
-  onAction?: (action: Action) => void
+  onAction?: (action: Action, e: React.MouseEvent) => void
   closeOnTouchOutside?: boolean
   closeOnAction?: boolean
   children: ReactNode
+  stopPropagation?: PropagationEvent[]
+  onActionsReveal?: (side: 'left' | 'right') => void
 } & NativeProps<'--background'>
 
 const defaultProps = {
@@ -47,6 +55,7 @@ const defaultProps = {
   leftActions: [] as Action[],
   closeOnTouchOutside: true,
   closeOnAction: true,
+  stopPropagation: [],
 }
 
 export const SwipeAction = forwardRef<SwipeActionRef, SwipeActionProps>(
@@ -79,9 +88,20 @@ export const SwipeAction = forwardRef<SwipeActionRef, SwipeActionProps>(
 
     const draggingRef = useRef(false)
 
+    const dragCancelRef = useRef<(() => void) | null>(null)
+    function forceCancelDrag() {
+      dragCancelRef.current?.()
+      draggingRef.current = false
+    }
+
     const bind = useDrag(
       state => {
-        draggingRef.current = true
+        dragCancelRef.current = state.cancel
+        if (!state.intentional) return
+        if (state.down) {
+          draggingRef.current = true
+        }
+        if (!draggingRef.current) return
         const [offsetX] = state.offset
         if (state.last) {
           const leftWidth = getLeftWidth()
@@ -94,9 +114,13 @@ export const SwipeAction = forwardRef<SwipeActionRef, SwipeActionProps>(
           } else {
             position = 0
           }
+          const targetX = nearest([-rightWidth, 0, leftWidth], position)
           api.start({
-            x: nearest([-rightWidth, 0, leftWidth], position),
+            x: targetX,
           })
+          if (targetX !== 0) {
+            p.onActionsReveal?.(targetX > 0 ? 'left' : 'right')
+          }
           window.setTimeout(() => {
             draggingRef.current = false
           })
@@ -121,6 +145,7 @@ export const SwipeAction = forwardRef<SwipeActionRef, SwipeActionProps>(
         axis: 'x',
         preventScroll: true,
         pointer: { touch: true },
+        triggerAllEvents: true,
       }
     )
 
@@ -128,6 +153,7 @@ export const SwipeAction = forwardRef<SwipeActionRef, SwipeActionProps>(
       api.start({
         x: 0,
       })
+      forceCancelDrag()
     }
 
     useImperativeHandle(ref, () => ({
@@ -141,6 +167,7 @@ export const SwipeAction = forwardRef<SwipeActionRef, SwipeActionProps>(
             x: getLeftWidth(),
           })
         }
+        p.onActionsReveal?.(side)
       },
       close,
     }))
@@ -167,7 +194,7 @@ export const SwipeAction = forwardRef<SwipeActionRef, SwipeActionProps>(
       return (
         <Button
           key={action.key}
-          className='adm-swipe-action-action-button'
+          className={`${classPrefix}-action-button`}
           style={{
             '--background-color': colorRecord[color] ?? color,
           }}
@@ -176,7 +203,7 @@ export const SwipeAction = forwardRef<SwipeActionRef, SwipeActionProps>(
               close()
             }
             action.onClick?.(e)
-            props.onAction?.(action)
+            props.onAction?.(action, e)
           }}
         >
           {action.text}
@@ -187,7 +214,7 @@ export const SwipeAction = forwardRef<SwipeActionRef, SwipeActionProps>(
     return withNativeProps(
       props,
       <div
-        className='adm-swipe-action'
+        className={classPrefix}
         {...bind()}
         ref={rootRef}
         onClickCapture={e => {
@@ -197,41 +224,45 @@ export const SwipeAction = forwardRef<SwipeActionRef, SwipeActionProps>(
           }
         }}
       >
-        <animated.div className='adm-swipe-action-track' style={{ x }}>
+        <animated.div className={`${classPrefix}-track`} style={{ x }}>
+          {withStopPropagation(
+            props.stopPropagation,
+            <div
+              className={`${classPrefix}-actions ${classPrefix}-actions-left`}
+              ref={leftRef}
+            >
+              {props.leftActions.map(renderAction)}
+            </div>
+          )}
           <div
-            className='adm-swipe-action-actions adm-swipe-action-actions-left'
-            ref={leftRef}
-          >
-            {props.leftActions.map(renderAction)}
-          </div>
-          <div
-            className='adm-swipe-action-content'
+            className={`${classPrefix}-content`}
             onClickCapture={e => {
               if (x.goal !== 0) {
                 e.preventDefault()
                 e.stopPropagation()
-                api.start({
-                  x: 0,
-                })
+                close()
               }
             }}
           >
             <animated.div
               style={{
                 pointerEvents: x.to(v =>
-                  v !== 0 && x.goal !== 0 ? 'none' : 'unset'
+                  v !== 0 && x.goal !== 0 ? 'none' : 'auto'
                 ),
               }}
             >
               {props.children}
             </animated.div>
           </div>
-          <div
-            className='adm-swipe-action-actions adm-swipe-action-actions-right'
-            ref={rightRef}
-          >
-            {props.rightActions.map(renderAction)}
-          </div>
+          {withStopPropagation(
+            props.stopPropagation,
+            <div
+              className={`${classPrefix}-actions ${classPrefix}-actions-right`}
+              ref={rightRef}
+            >
+              {props.rightActions.map(renderAction)}
+            </div>
+          )}
         </animated.div>
       </div>
     )

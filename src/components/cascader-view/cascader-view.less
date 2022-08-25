@@ -3,7 +3,7 @@
 
   &-tabs {
     &.adm-tabs {
-      --title-font-size: 14px;
+      --title-font-size: var(--adm-font-size-6);
       --content-padding: none;
     }
   }
@@ -18,19 +18,17 @@
   }
 
   &-content {
-    &.adm-list {
+    > .adm-check-list {
       --border-inner: none;
       --border-bottom: none;
       --border-top: none;
-      overflow-y: auto;
     }
     height: var(--height);
-    padding-top: 4px;
-    box-sizing: border-box;
+    overflow-y: auto;
   }
 
   &-item {
-    font-size: 14px;
+    font-size: var(--adm-font-size-6);
 
     &-active {
       color: var(--adm-color-primary);
@@ -38,5 +36,23 @@
   }
   .adm-list-inner {
     margin-bottom: 0;
+  }
+
+  &-skeleton {
+    padding: 16px 12px;
+    .adm-skeleton {
+      margin-bottom: 16px;
+      --height: 18px;
+      --width: 80%;
+      --border-radius: 2px;
+      &.adm-cascader-view-skeleton-line {
+        &-3 {
+          --width: 90%;
+        }
+        &-4 {
+          --width: 60%;
+        }
+      }
+    }
   }
 }

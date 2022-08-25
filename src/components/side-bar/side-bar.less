@@ -4,16 +4,30 @@
   --height: 100%;
   --width: 105px;
   --item-border-radius: 8px;
-  --background-color: #f5f5f5;
+  --background-color: var(--adm-color-box);
 
   width: var(--width);
   height: var(--height);
   box-sizing: border-box;
-  font-size: 15px;
+  font-size: var(--adm-font-size-main);
   overflow-y: auto;
   // https://github.com/PolymerElements/iron-list/issues/18
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
+  background-color: var(--background-color);
+
+  display: flex;
+  flex-direction: column;
+
+  &-items {
+    flex: none;
+    overflow: hidden;
+  }
+  &-extra-space {
+    flex: auto;
+    overflow: hidden;
+    position: relative;
+  }
 
   &-item {
     display: flex;
@@ -23,6 +37,7 @@
     position: relative;
     cursor: pointer;
     background-color: var(--background-color);
+    overflow: visible;
 
     &-highlight {
       position: absolute;
@@ -36,33 +51,25 @@
 
     &-active {
       color: var(--adm-color-primary);
-      background-color: var(--adm-color-white);
+      background-color: var(--adm-color-background);
       position: relative;
     }
 
-    &-active + .@{class-prefix-side-bar}-item {
-      border-top-right-radius: var(--item-border-radius);
-    }
-
-    &-active::before {
-      content: '';
+    &-corner {
       width: var(--item-border-radius);
       height: var(--item-border-radius);
-      background-color: var(--adm-color-white);
       position: absolute;
-      top: calc(var(--item-border-radius) * -1);
+      z-index: 100;
       right: 0;
-    }
-
-    &-active::after {
-      content: '';
-      width: var(--item-border-radius);
-      height: var(--item-border-radius);
-      background-color: var(--background-color);
-      border-bottom-right-radius: var(--item-border-radius);
-      position: absolute;
-      top: calc(var(--item-border-radius) * -1);
-      right: 0;
+      user-select: none;
+      pointer-events: none;
+      &-top {
+        top: 0;
+        transform: rotate(-90deg);
+      }
+      &-bottom {
+        bottom: 0;
+      }
     }
 
     &-disabled {
@@ -71,5 +78,9 @@
         opacity: 0.4;
       }
     }
+  }
+
+  &-badge.adm-badge {
+    --right: -4px;
   }
 }
