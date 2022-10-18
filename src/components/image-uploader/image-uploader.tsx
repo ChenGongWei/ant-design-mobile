@@ -10,7 +10,7 @@ import { NativeProps, withNativeProps } from '../../utils/native-props'
 import { useConfig } from '../config-provider'
 import type { ImageProps } from '../image'
 
-export type TaskStatus = 'pending' | 'fail'
+export type TaskStatus = 'pending' | 'fail' | 'success'
 
 export interface ImageUploadItem {
   key?: string | number
@@ -26,10 +26,13 @@ type Task = {
   status: TaskStatus
 }
 
+export type UploadTask = Pick<Task, 'id' | 'status'>
+
 export type ImageUploaderProps = {
   defaultValue?: ImageUploadItem[]
   value?: ImageUploadItem[]
   onChange?: (items: ImageUploadItem[]) => void
+  onUploadQueueChange?: (tasks: UploadTask[]) => void
   accept?: string
   multiple?: boolean
   maxCount?: number
@@ -49,6 +52,11 @@ export type ImageUploaderProps = {
   showFailed?: boolean
   imageFit?: ImageProps['fit']
   children?: React.ReactNode
+  renderItem?: (
+    originNode: React.ReactElement,
+    file: ImageUploadItem,
+    fileList: ImageUploadItem[]
+  ) => React.ReactNode
 } & NativeProps<'--cell-size'>
 
 const classPrefix = `adm-image-uploader`
@@ -82,9 +90,15 @@ export const ImageUploader: FC<ImageUploaderProps> = p => {
     )
   }, [value])
 
+  useIsomorphicLayoutEffect(() => {
+    props.onUploadQueueChange?.(
+      tasks.map(item => ({ id: item.id, status: item.status }))
+    )
+  }, [tasks])
+
   const idCountRef = useRef(0)
 
-  const { maxCount, onPreview } = props
+  const { maxCount, onPreview, renderItem } = props
 
   async function processFile(file: File, fileList: File[]) {
     const { beforeUpload } = props
@@ -145,6 +159,7 @@ export const ImageUploader: FC<ImageUploaderProps> = p => {
               if (task.id === currentTask.id) {
                 return {
                   ...task,
+                  status: 'success',
                   url: result.url,
                 }
               }
@@ -193,29 +208,36 @@ export const ImageUploader: FC<ImageUploaderProps> = p => {
     props.showUpload &&
     (maxCount === 0 || value.length + tasks.length < maxCount)
 
+  const renderImages = () => {
+    return value.map((fileItem, index) => {
+      const originNode = (
+        <PreviewItem
+          key={fileItem.key ?? index}
+          url={fileItem.thumbnailUrl ?? fileItem.url}
+          deletable={props.deletable}
+          imageFit={props.imageFit}
+          onClick={() => {
+            if (props.preview) {
+              previewImage(index)
+            }
+            onPreview && onPreview(index, fileItem)
+          }}
+          onDelete={async () => {
+            const canDelete = await props.onDelete?.(fileItem)
+            if (canDelete === false) return
+            setValue(value.filter((x, i) => i !== index))
+          }}
+        />
+      )
+      return renderItem ? renderItem(originNode, fileItem, value) : originNode
+    })
+  }
+
   return withNativeProps(
     props,
     <div className={classPrefix}>
       <Space className={`${classPrefix}-space`} wrap block>
-        {value.map((fileItem, index) => (
-          <PreviewItem
-            key={fileItem.key ?? index}
-            url={fileItem.thumbnailUrl ?? fileItem.url}
-            deletable={props.deletable}
-            imageFit={props.imageFit}
-            onClick={() => {
-              if (props.preview) {
-                previewImage(index)
-              }
-              onPreview && onPreview(index, fileItem)
-            }}
-            onDelete={async () => {
-              const canDelete = await props.onDelete?.(fileItem)
-              if (canDelete === false) return
-              setValue(value.filter((x, i) => i !== index))
-            }}
-          />
-        ))}
+        {renderImages()}
         {tasks.map(task => {
           if (!props.showFailed && task.status === 'fail') {
             return null
